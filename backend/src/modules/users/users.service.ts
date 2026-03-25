@@ -24,11 +24,18 @@ export class UsersService {
   const savedUser = await this.userRepo.save(user);
 
   // 🔥 Add job to queue
-  await this.userQueue.add('send-welcome', {
+  await this.userQueue.add(
+  'send-welcome',
+  {
     userId: savedUser.id,
     name: savedUser.name,
-  });
+  },
+  {
+    attempts: 3, // retry 3 times
+    backoff: 2000, // wait 2 sec before retry
+  },
+);
 
   return savedUser;
-  }
+}
 }

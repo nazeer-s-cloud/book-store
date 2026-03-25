@@ -38,10 +38,10 @@ import { UsersModule } from './modules/users/users.module';
 
     // 🔥 REDIS + QUEUE CONFIG
     BullModule.forRoot({
-      redis: {
-        host: 'localhost',
-        port: 6379,
-      },
+    redis: {
+    host: process.env.REDIS_HOST || 'localhost',
+    port: 6379,
+    },
     }),
 
     // 🔥 FEATURE MODULE

@@ -5,7 +5,13 @@ import type { Job } from 'bull';
 export class UsersProcessor {
   @Process('send-welcome')
   async handleWelcome(job: Job) {
-    console.log('🔥 Processing job:', job.data);
+    console.log('🔥 Job received:', job.data);
+
+    // 🔥 simulate random failure
+    if (Math.random() < 0.5) {
+      console.log('❌ Simulating failure...');
+      throw new Error('Random failure');
+    }
 
     // simulate work
     await new Promise((res) => setTimeout(res, 2000));
