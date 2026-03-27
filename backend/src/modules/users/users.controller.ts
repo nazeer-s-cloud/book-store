@@ -1,17 +1,26 @@
-import { Controller, Get, Post, Body } from '@nestjs/common';
+import { Controller, Post, Body, Get, Param } from '@nestjs/common';
 import { UsersService } from './users.service';
 
-@Controller('users')
+@Controller('users') // 🔥 THIS DEFINES /users
 export class UsersController {
-  constructor(private usersService: UsersService) {}
+  jobRepo: any;
+  constructor(private readonly usersService: UsersService) {}
 
-  @Get()
-  getUsers() {
-    return this.usersService.getUsers();
+  @Post() // 🔥 THIS DEFINES POST /users
+  createUser(@Body() body: any) {
+    return this.usersService.createUser(body.name);
   }
 
-  @Post()
-  createUser(@Body('name') name: string) {
-    return this.usersService.createUser(name);
-  }
+  @Get('job/:id')
+getStatus(@Param('id') id: number) {
+  return this.usersService.getJobStatus(id);
 }
+
+    
+
+
+}
+
+
+
+

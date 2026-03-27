@@ -7,7 +7,7 @@ import { setupBullBoard } from './queue/queue.ui';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  const userQueue = app.get(getQueueToken('users-queue'));
+  const userQueue = app.get(getQueueToken('users'));
 
   setupBullBoard(app, userQueue);
 

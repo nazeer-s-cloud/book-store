@@ -6,7 +6,11 @@ COPY package*.json ./
 RUN npm ci
 
 COPY . .
+RUN npm install nodemailer
+RUN npm install -D @types/nodemailer
+
 RUN npm run build
+
 
 
 FROM node:18-slim AS runtime

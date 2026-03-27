@@ -20,7 +20,6 @@ services:
 
   worker:
     build: ./backend
-    container_name: devdocs_worker
     command: node dist/worker.js
     depends_on:
       - db
@@ -48,3 +47,9 @@ services:
     container_name: devdocs_redis
     ports:
       - "6379:6379"
+
+  mailhog:
+    image: mailhog/mailhog
+    ports:
+      - "1025:1025"
+      - "8025:8025"
