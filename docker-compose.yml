@@ -1,6 +1,16 @@
 version: '3.8'
 
 services:
+  frountend:
+    build:
+      context: ./frontend
+    container_name: devdocs_frontend
+    ports:
+      - "3001:3000"
+    command: ["node", "server.js"]  # 🔥 force override
+    depends_on:
+      - api
+  
   api:
     build: ./backend
     container_name: devdocs_api
