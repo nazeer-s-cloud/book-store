@@ -7,13 +7,17 @@ import { setupBullBoard } from './queue/queue.ui';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
+  // ✅ CORS
   app.enableCors({
     origin: '*',
   });
 
+  // ✅ GET QUEUES (INSIDE FUNCTION)
   const userQueue = app.get(getQueueToken('users'));
+  const orderQueue = app.get(getQueueToken('orders'));
 
-  setupBullBoard(app, userQueue);
+  // ✅ PASS BOTH
+  setupBullBoard(app, [userQueue, orderQueue]);
 
   await app.listen(3000);
 

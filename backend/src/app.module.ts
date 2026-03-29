@@ -5,11 +5,15 @@ import { BullModule } from '@nestjs/bull';
 
 import { UsersModule } from './modules/users/users.module';
 
+import { OrdersModule } from './modules/orders/orders.module';
+
 @Module({
   imports: [
+    OrdersModule,
     ConfigModule.forRoot({
       isGlobal: true,
     }),
+
 
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],

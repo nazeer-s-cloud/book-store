@@ -1,133 +1,161 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
 const API_URL = 'http://localhost:3000';
 
+const products = [
+  {
+    id: 1,
+    name: 'Laptop',
+    price: 1000,
+    image: 'https://images.unsplash.com/photo-1517336714731-489689fd1ca8',
+  },
+  {
+    id: 2,
+    name: 'Phone',
+    price: 500,
+    image: 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9',
+  },
+  {
+    id: 3,
+    name: 'Headphones',
+    price: 200,
+    image: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcT61_SOUEXTBG6lLyJpZqoEk7uXSrA7gZDnrg&s',
+  },
+];
+
 export default function Home() {
-  const [name, setName] = useState('');
-  const [jobId, setJobId] = useState<number | null>(null);
-  const [status, setStatus] = useState<string | null>(null);
+  const [orders, setOrders] = useState<any[]>([]);
 
-  // 🔥 CREATE JOB
-  const createUser = async () => {
-    console.log("CLICKED");
+  // load orders
+  useEffect(() => {
+    fetch(`${API_URL}/orders`)
+      .then(res => res.json())
+      .then(data => setOrders(data));
+  }, []);
 
-    try {
-      const res = await fetch(`${API_URL}/users`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name }),
-      });
+  // create order
+  const createOrder = async (productId: number) => {
+    const res = await fetch(`${API_URL}/orders`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ productId }),
+    });
 
-      const data = await res.json();
-
-      console.log("RESPONSE DATA:", data);
-
-      setJobId(data.jobId);
-      setStatus('pending');
-    } catch (err) {
-      console.error("API ERROR:", err);
-    }
+    const data = await res.json();
+    setOrders(prev => [{ id: data.id, status: 'PENDING' }, ...prev]);
   };
 
-  // 🔥 AUTO POLLING
+  // polling
   useEffect(() => {
-    if (!jobId) return;
-
     const interval = setInterval(async () => {
-      try {
-        const res = await fetch(`${API_URL}/users/job/${jobId}`);
-        const data = await res.json();
-
-        setStatus(data.status);
-
-        if (data.status === 'completed' || data.status === 'failed') {
-          clearInterval(interval);
-        }
-      } catch (err) {
-        console.error("STATUS ERROR:", err);
-      }
+      const res = await fetch(`${API_URL}/orders`, { cache: 'no-store' });
+      const data = await res.json();
+      setOrders(data);
     }, 2000);
 
     return () => clearInterval(interval);
-  }, [jobId]);
+  }, []);
 
-  // 🎨 STATUS COLOR
-  const getStatusColor = () => {
-    if (status === 'pending') return 'orange';
-    if (status === 'completed') return 'green';
-    if (status === 'failed') return 'red';
-    return 'gray';
+  const getColor = (status: string) => {
+    if (status === 'PENDING') return '#f59e0b';
+    if (status === 'PROCESSING') return '#3b82f6';
+    if (status === 'COMPLETED') return '#22c55e';
+    if (status === 'FAILED') return '#ef4444';
+    return '#aaa';
   };
 
   return (
     <div style={styles.container}>
-      <h1 style={styles.title}>🚀 Async Job Dashboard</h1>
+      <h1 style={styles.title}>🛒 DevOps Store</h1>
 
-      <div style={styles.card}>
-        <input
-          style={styles.input}
-          placeholder="Enter username"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-        />
-
-        <button style={styles.button} onClick={createUser}>
-          Create Job
-        </button>
-
-        {jobId && (
-          <div style={styles.statusBox}>
-            <p>Job ID: {jobId}</p>
-            <p style={{ color: getStatusColor(), fontWeight: 'bold' }}>
-              Status: {status}
-            </p>
+      {/* PRODUCTS */}
+      <div style={styles.products}>
+        {products.map(p => (
+          <div key={p.id} style={styles.card}>
+            <img src={p.image} style={styles.image} />
+            <h3>{p.name}</h3>
+            <p>₹{p.price}</p>
+            <button onClick={() => createOrder(p.id)} style={styles.button}>
+              Buy Now
+            </button>
           </div>
-        )}
+        ))}
+      </div>
+
+      {/* ORDERS */}
+      <div style={styles.orders}>
+        <h2>📦 Orders</h2>
+
+        {orders.map(o => (
+          <div key={o.id} style={styles.orderItem}>
+            <span>Order #{o.id}</span>
+            <span style={{ color: getColor(o.status) }}>
+              {o.status}
+            </span>
+          </div>
+        ))}
       </div>
     </div>
   );
 }
 
-// 🎨 STYLES
 const styles: any = {
   container: {
-    height: '100vh',
-    background: '#0f172a',
+    minHeight: '100vh',
+    background: 'linear-gradient(135deg, #0f172a, #1e293b)',
     color: 'white',
-    display: 'flex',
-    justifyContent: 'center',
-    alignItems: 'center',
+    padding: 40,
+    textAlign: 'center',
+    fontFamily: 'sans-serif',
   },
   title: {
-    position: 'absolute',
-    top: 40,
+    fontSize: 32,
+    marginBottom: 40,
+  },
+  products: {
+    display: 'flex',
+    justifyContent: 'center',
+    gap: 30,
+    flexWrap: 'wrap',
   },
   card: {
-    background: '#1e293b',
-    padding: 30,
-    borderRadius: 12,
-    boxShadow: '0 0 20px rgba(0,0,0,0.5)',
-    textAlign: 'center',
+    background: 'rgba(255,255,255,0.05)',
+    backdropFilter: 'blur(10px)',
+    borderRadius: 15,
+    padding: 20,
+    width: 220,
+    boxShadow: '0 10px 30px rgba(0,0,0,0.4)',
   },
-  input: {
-    padding: 10,
-    marginBottom: 10,
-    width: '100%',
-    borderRadius: 6,
-    border: 'none',
-  },
+  image: {
+  width: '100%',
+  height: 140,
+  objectFit: 'cover',
+  borderRadius: 10,
+  marginBottom: 10,
+},
   button: {
-    padding: 10,
-    width: '100%',
+    marginTop: 10,
+    padding: '10px 15px',
+    borderRadius: 8,
+    border: 'none',
     background: '#3b82f6',
     color: 'white',
-    border: 'none',
-    borderRadius: 6,
     cursor: 'pointer',
+    width: '100%',
   },
-  statusBox: {
-    marginTop: 20,
+  orders: {
+    marginTop: 50,
+    maxWidth: 500,
+    marginInline: 'auto',
+  },
+  orderItem: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    background: 'rgba(255,255,255,0.05)',
+    padding: 12,
+    borderRadius: 8,
+    marginTop: 10,
   },
 };

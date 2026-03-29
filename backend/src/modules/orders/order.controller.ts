@@ -6,17 +6,16 @@ export class OrderController {
   constructor(private readonly orderService: OrderService) {}
 
   @Post()
-  create(@Body() body: { productId: number }) {
-    return this.orderService.createOrder(body.productId);
+create(@Body() body: { productId: number }) {
+  if (!body.productId) {
+    throw new Error('productId is required');
   }
 
-  @Get()
-  getAll() {
-    return this.orderService.getAllOrders();
-  }
+  return this.orderService.createOrder(body.productId);
+}
 
   @Get(':id')
-  getOne(@Param('id') id: string) {
+  getOrder(@Param('id') id: string) {
     return this.orderService.getOrder(Number(id));
   }
 }

@@ -6,6 +6,9 @@ export class JobEntity {
   id: number;
 
   @Column()
+  productId: number;
+  
+  @Column()
   status: string; // pending, completed, failed
 
   @Column({ nullable: true })

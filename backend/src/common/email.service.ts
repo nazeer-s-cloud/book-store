@@ -12,15 +12,16 @@ export class EmailService {
       pass: 'niz',
     },
   });
+  emailService: any;
 
   async sendEmail(to: string, subject: string, text: string) {
-    const info = await this.transporter.sendMail({
-      from: '"DevDocs" <no-reply@devdocs.com>',
-      to,
-      subject,
-      text,
-    });
+  const info = await this.transporter.sendMail({
+    from: '"DevDocs" <no-reply@devdocs.com>',
+    to,
+    subject,
+    text,
+  });
 
-    console.log('📧 Email sent:', info.messageId);
+  console.log('📧 Email sent:', info.messageId);
   }
 }

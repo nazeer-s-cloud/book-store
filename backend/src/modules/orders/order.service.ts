@@ -1,9 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { Order } from './order.entity';
 import { InjectQueue } from '@nestjs/bull';
 import type { Queue } from 'bull';
-import { Order } from './order.entity';
 
 @Injectable()
 export class OrderService {
@@ -16,25 +16,33 @@ export class OrderService {
   ) {}
 
   async createOrder(productId: number) {
+    // ✅ 1. Save order
     const order = this.orderRepo.create({
       productId,
       status: 'PENDING',
     });
 
-    const saved = await this.orderRepo.save(order);
+    const savedOrder = await this.orderRepo.save(order);
 
-    await this.orderQueue.add('process-order', {
-      orderId: saved.id,
-    });
+    // ✅ 2. Push to queue
+    await this.orderQueue.add(
+      'process-order',
+      {
+        orderId: savedOrder.id,
+        productId: savedOrder.productId,
+      },
+      {
+        attempts: 3,
+        backoff: 5000,
+        removeOnComplete: true,
+        removeOnFail: false,
+      },
+    );
 
-    return saved;
+    return savedOrder;
   }
 
-  async getAllOrders() {
-    return this.orderRepo.find({
-      order: { id: 'DESC' },
-    });
-  }
+    
 
   async getOrder(id: number) {
     return this.orderRepo.findOne({

@@ -3,12 +3,12 @@ import { createBullBoard } from '@bull-board/api';
 import { BullAdapter } from '@bull-board/api/bullAdapter';
 import { Queue } from 'bull';
 
-export function setupBullBoard(app: any, userQueue: Queue) {
+export function setupBullBoard(app: any, queues: Queue[]) {
   const serverAdapter = new ExpressAdapter();
   serverAdapter.setBasePath('/admin/queues');
 
   createBullBoard({
-    queues: [new BullAdapter(userQueue)],
+    queues: queues.map((q) => new BullAdapter(q)),
     serverAdapter,
   });
 
