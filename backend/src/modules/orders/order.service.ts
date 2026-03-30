@@ -1,52 +1,59 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Order } from './order.entity';
 import { InjectQueue } from '@nestjs/bull';
 import type { Queue } from 'bull';
 
+import { Order } from './order.entity';
+
 @Injectable()
 export class OrderService {
+  retryOrder(arg0: number) {
+    throw new Error('Method not implemented.');
+  }
+
+  async retryOrder(orderId: number) {
+  await this.orderRepo.update(orderId, { status: 'PENDING' });
+
+  await this.orderQueue.add('process-order', {
+    orderId,
+  });
+}
+
   constructor(
-    @InjectRepository(Order)
+    @InjectRepository(Order) // ✅ REQUIRED
     private orderRepo: Repository<Order>,
 
-    @InjectQueue('orders')
+    @InjectQueue('orders') // ✅ REQUIRED
     private orderQueue: Queue,
   ) {}
 
   async createOrder(productId: number) {
-    // ✅ 1. Save order
     const order = this.orderRepo.create({
       productId,
       status: 'PENDING',
     });
 
-    const savedOrder = await this.orderRepo.save(order);
+    const saved = await this.orderRepo.save(order);
 
-    // ✅ 2. Push to queue
-    await this.orderQueue.add(
-      'process-order',
-      {
-        orderId: savedOrder.id,
-        productId: savedOrder.productId,
-      },
-      {
-        attempts: 3,
-        backoff: 5000,
-        removeOnComplete: true,
-        removeOnFail: false,
-      },
-    );
+    await this.orderQueue.add('process-order', {
+      orderId: saved.id,
+    });
 
-    return savedOrder;
+    return saved;
   }
 
-    
+  async getAllOrders() {
+    return this.orderRepo.find({
+      order: { id: 'DESC' },
+    });
+  }
 
   async getOrder(id: number) {
     return this.orderRepo.findOne({
       where: { id },
     });
   }
+
+  
 }

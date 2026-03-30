@@ -6,17 +6,17 @@ import { Order } from './order.entity';
 import { OrderService } from './order.service';
 import { OrderController } from './order.controller';
 import { OrderProcessor } from './order.processor';
-import { EmailService } from '../../common/email.service';
 
 import { PaymentService } from '../payment/payment.service';
 import { InventoryService } from '../inventory/inventory.service';
+import { EmailService } from '../../common/email.service';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Order]),
     BullModule.registerQueue({ name: 'orders' }),
   ],
-  controllers: [OrderController],
+  controllers: [OrderController], // 🚨 MUST BE HERE
   providers: [
     OrderService,
     OrderProcessor,

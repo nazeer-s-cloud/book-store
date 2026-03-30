@@ -4,8 +4,11 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { BullModule } from '@nestjs/bull';
 
 import { UsersModule } from './modules/users/users.module';
+import { Order } from './modules/orders/order.entity';
 
 import { OrdersModule } from './modules/orders/orders.module';
+
+
 
 @Module({
   imports: [
