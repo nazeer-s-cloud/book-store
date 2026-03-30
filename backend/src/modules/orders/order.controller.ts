@@ -5,6 +5,12 @@ import { OrderService } from './order.service';
 export class OrderController {
   constructor(private readonly orderService: OrderService) {}
 
+  
+  @Post('retry/:id')
+retry(@Param('id') id: string) {
+  return this.orderService.retryOrder(Number(id));
+}
+  
   @Post()
   create(@Body() body: { productId: number }) {
     return this.orderService.createOrder(body.productId);
