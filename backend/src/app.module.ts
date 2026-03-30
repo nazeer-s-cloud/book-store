@@ -1,45 +1,34 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { BullModule } from '@nestjs/bull';
 
-import { UsersModule } from './modules/users/users.module';
-import { Order } from './modules/orders/order.entity';
-
 import { OrdersModule } from './modules/orders/orders.module';
-
-
+import { UsersModule } from './modules/users/users.module';
 
 @Module({
   imports: [
-    OrdersModule,
-    ConfigModule.forRoot({
-      isGlobal: true,
+    // DB
+    TypeOrmModule.forRoot({
+      type: 'postgres',
+      host: process.env.DB_HOST,
+      port: 5432,
+      username: process.env.DB_USER,
+      password: process.env.DB_PASS,
+      database: process.env.DB_NAME,
+      autoLoadEntities: true,
+      synchronize: true,
     }),
 
-
-    TypeOrmModule.forRootAsync({
-      imports: [ConfigModule],
-      inject: [ConfigService],
-      useFactory: (config: ConfigService) => ({
-        type: 'postgres',
-        host: config.get<string>('DB_HOST'),
-        port: parseInt(config.get<string>('DB_PORT') || '5432'),
-        username: config.get<string>('DB_USER'),
-        password: config.get<string>('DB_PASS'),
-        database: config.get<string>('DB_NAME'),
-        autoLoadEntities: true,
-        synchronize: true,
-      }),
-    }),
-
+    // Redis / Bull
     BullModule.forRoot({
       redis: {
-        host: 'redis',
+        host: process.env.REDIS_HOST,
         port: 6379,
       },
     }),
 
+    // 🔥 THIS IS THE FIX
+    OrdersModule,
     UsersModule,
   ],
 })

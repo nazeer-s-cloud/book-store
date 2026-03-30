@@ -4,25 +4,27 @@ import { BullModule } from '@nestjs/bull';
 
 import { Order } from './order.entity';
 import { OrderService } from './order.service';
-import { OrderController } from './order.controller';
 import { OrderProcessor } from './order.processor';
-
-import { PaymentService } from '../payment/payment.service';
 import { InventoryService } from '../inventory/inventory.service';
-import { EmailService } from '../../common/email.service';
+import { OrderController } from './order.controller';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Order]),
+
     BullModule.registerQueue({ name: 'orders' }),
+
+    // ⚠️ Only if you are still using notification queue
+    BullModule.registerQueue({ name: 'notification-queue' }),
   ],
-  controllers: [OrderController], // 🚨 MUST BE HERE
+  controllers: [OrderController],
+
   providers: [
     OrderService,
     OrderProcessor,
-    PaymentService,
+
+    // 🔥 THIS IS THE FIX
     InventoryService,
-    EmailService,
   ],
 })
 export class OrdersModule {}

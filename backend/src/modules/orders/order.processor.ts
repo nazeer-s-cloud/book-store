@@ -1,28 +1,29 @@
+import axios from 'axios';
 import {
   Processor,
   Process,
   OnQueueCompleted,
   OnQueueFailed,
+  InjectQueue,
 } from '@nestjs/bull';
-import type { Job } from 'bull';
+import type { Job, Queue } from 'bull';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 
 import { Order } from './order.entity';
-import { EmailService } from '../../common/email.service';
-import { PaymentService } from '../payment/payment.service';
 import { InventoryService } from '../inventory/inventory.service';
 
 @Processor('orders')
 export class OrderProcessor {
   constructor(
-    @InjectRepository(Order)
-    private orderRepo: Repository<Order>,
+  @InjectRepository(Order)
+  private orderRepo: Repository<Order>,
 
-    private paymentService: PaymentService,
-    private inventoryService: InventoryService,
-    private emailService: EmailService,
-  ) {}
+  private inventoryService: InventoryService,
+
+  @InjectQueue('notification-queue')   // 🔥 ADD BACK
+  private notificationQueue: Queue,
+) {}
 
   @Process('process-order')
   async handle(job: Job) {
@@ -30,42 +31,51 @@ export class OrderProcessor {
 
     console.log(`🚀 Processing order ${orderId}`);
 
-    // 🔥 1. Fetch
     const order = await this.orderRepo.findOne({
       where: { id: orderId },
     });
 
     if (!order) throw new Error('Order not found');
 
-    // 🔥 2. Idempotency
-    if (order.status !== 'PENDING') {
-      console.log('⚠️ Already processed / invalid state');
-      return;
-    }
-
-    // 🔥 3. Processing
     await this.orderRepo.update(orderId, {
       status: 'PROCESSING',
     });
 
+    
+
     try {
-      // 🔥 Payment
-      await this.paymentService.processPayment(orderId);
-
-      // 🔥 Inventory
-      await this.inventoryService.reserveStock(orderId);
-
-      // 🔥 Email
-      await this.emailService.sendEmail(
-        'test@example.com',
-        'Order Confirmed',
-        `Order #${orderId} completed`,
+      // 🔥 PAYMENT (HTTP CALL)
+      const paymentResponse = await axios.post(
+        'http://payment-service:3002/process-payment',
+        {
+          orderId: order.id,
+          amount: order.totalAmount || 100,
+        },
       );
 
-      // 🔥 Complete
+      if (paymentResponse.data.status !== 'SUCCESS') {
+        throw new Error('Payment failed');
+      }
+
+      console.log('💰 Payment success');
+
+      // 🔥 INVENTORY
+      await this.inventoryService.reserveStock(orderId);
+
+      // 🔥 COMPLETE
       await this.orderRepo.update(orderId, {
         status: 'COMPLETED',
       });
+
+      // 🔥 AFTER PAYMENT + INVENTORY
+
+await this.notificationQueue.add(
+  'send-email',
+  {
+    email: 'test@example.com',
+    message: `Order #${orderId} completed`,
+  },
+);
 
       console.log('✅ Order completed');
     } catch (err) {
@@ -73,6 +83,7 @@ export class OrderProcessor {
         status: 'FAILED',
       });
 
+      console.log('❌ Order failed');
       throw err;
     }
   }

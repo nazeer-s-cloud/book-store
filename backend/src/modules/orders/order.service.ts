@@ -5,28 +5,28 @@ import { InjectQueue } from '@nestjs/bull';
 import type { Queue } from 'bull';
 
 import { Order } from './order.entity';
+import { InventoryService } from '../inventory/inventory.service';
 
 @Injectable()
 export class OrderService {
-  retryOrder(arg0: number) {
-    throw new Error('Method not implemented.');
-  }
-
-  async retryOrder(orderId: number) {
-  await this.orderRepo.update(orderId, { status: 'PENDING' });
-
-  await this.orderQueue.add('process-order', {
-    orderId,
-  });
-}
-
   constructor(
-    @InjectRepository(Order) // ✅ REQUIRED
+    @InjectRepository(Order)
     private orderRepo: Repository<Order>,
 
-    @InjectQueue('orders') // ✅ REQUIRED
+    private inventoryService: InventoryService,
+
+    // 🔥 THIS IS THE FIX
+    @InjectQueue('orders')
     private orderQueue: Queue,
   ) {}
+
+  async retryOrder(orderId: number) {
+    await this.orderRepo.update(orderId, { status: 'PENDING' });
+
+    await this.orderQueue.add('process-order', {
+      orderId,
+    });
+  }
 
   async createOrder(productId: number) {
     const order = this.orderRepo.create({
@@ -35,6 +35,8 @@ export class OrderService {
     });
 
     const saved = await this.orderRepo.save(order);
+
+    console.log('📥 Adding job to queue:', saved.id);
 
     await this.orderQueue.add('process-order', {
       orderId: saved.id,
@@ -54,6 +56,4 @@ export class OrderService {
       where: { id },
     });
   }
-
-  
 }

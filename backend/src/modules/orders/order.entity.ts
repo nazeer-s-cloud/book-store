@@ -13,4 +13,5 @@ export class Order {
 
   @CreateDateColumn()
   createdAt: Date;
+  totalAmount: number;
 }
