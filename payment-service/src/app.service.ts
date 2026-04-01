@@ -1,7 +1,15 @@
 import { Injectable } from '@nestjs/common';
+import { EventPattern } from '@nestjs/microservices';
 
 @Injectable()
 export class AppService {
+  @EventPattern('payment.process')
+  async handlePayment(data: any) {
+    console.log('💰 RabbitMQ Payment:', data);
+
+    return { status: 'SUCCESS' };
+  }
+
   getHello(): string {
     throw new Error('Method not implemented.');
   }

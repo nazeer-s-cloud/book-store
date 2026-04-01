@@ -12,6 +12,8 @@ import { Repository } from 'typeorm';
 
 import { Order } from './order.entity';
 import { InventoryService } from '../inventory/inventory.service';
+import { ClientProxy } from '@nestjs/microservices/client/client-proxy';
+import { Inject } from '@nestjs/common';
 
 @Processor('orders')
 export class OrderProcessor {
@@ -21,9 +23,18 @@ export class OrderProcessor {
 
   private inventoryService: InventoryService,
 
+  @Inject('RABBITMQ_SERVICE')
+  private client: ClientProxy,
+  
+
   @InjectQueue('notification-queue')   // 🔥 ADD BACK
   private notificationQueue: Queue,
+
+  @InjectQueue('failed-orders')
+  private failedQueue: Queue,
 ) {}
+
+  
 
   @Process('process-order')
   async handle(job: Job) {
@@ -45,19 +56,35 @@ export class OrderProcessor {
 
     try {
       // 🔥 PAYMENT (HTTP CALL)
-      const paymentResponse = await axios.post(
-        'http://payment-service:3002/process-payment',
-        {
-          orderId: order.id,
-          amount: order.totalAmount || 100,
-        },
-      );
+      // 🔥 PAYMENT (HYBRID: HTTP + RMQ)
 
-      if (paymentResponse.data.status !== 'SUCCESS') {
-        throw new Error('Payment failed');
-      }
+console.log('📡 Sending to RabbitMQ...');
 
-      console.log('💰 Payment success');
+this.client.emit('payment.process', {
+  orderId: order.id,
+  amount: order.totalAmount || 100,
+});
+
+// 🔥 KEEP HTTP (for now — safety fallback)
+// 🔥 PAYMENT (HYBRID: HTTP + RMQ)
+
+console.log('📡 Sending to RabbitMQ...');
+
+this.client.emit('payment.process', {
+  orderId: order.id,
+  amount: order.totalAmount || 100,
+});
+
+// 🔥 KEEP HTTP (for now — safety fallback)
+
+ console.log('📡 Sending to RabbitMQ...');
+
+this.client.emit('payment.process', {
+  orderId: order.id,
+  amount: order.totalAmount || 100,
+});
+
+console.log('💰 Payment success');
 
       // 🔥 INVENTORY
       await this.inventoryService.reserveStock(orderId);
@@ -78,15 +105,31 @@ await this.notificationQueue.add(
 );
 
       console.log('✅ Order completed');
-    } catch (err) {
-      await this.orderRepo.update(orderId, {
-        status: 'FAILED',
-      });
+    } 
+    
+      catch (err) {
 
-      console.log('❌ Order failed');
-      throw err;
-    }
+  const message = err.message || '';
+
+  // 🔥 NON-RETRYABLE
+  if (message.includes('Out of stock')) {
+    console.log('❌ Non-retryable error');
+
+    await this.failedQueue.add('failed-order', {
+      orderId,
+      reason: message,
+      type: 'BUSINESS_ERROR',
+    });
+
+    return; // ❌ NO RETRY
   }
+
+  // 🔥 RETRYABLE
+  throw err; // Bull will retry
+}
+  }
+
+
 
   @OnQueueCompleted()
   onCompleted(job: Job) {
@@ -94,8 +137,16 @@ await this.notificationQueue.add(
   }
 
   @OnQueueFailed()
-  onFailed(job: Job, err: Error) {
-    console.log(`❌ Order job failed: ${job.id}`);
-    console.log(`Reason: ${err.message}`);
-  }
+async onFailed(job: Job, err: Error) {
+  console.log(`❌ Order job failed: ${job.id}`);
+  console.log(`Reason: ${err.message}`);
+
+  // 🔥 Push to DLQ
+  await this.failedQueue.add('failed-order', {
+    orderId: job.data.orderId,
+    reason: err.message,
+    failedAt: new Date(),
+  });
+}
+
 }

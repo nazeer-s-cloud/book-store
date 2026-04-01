@@ -10,6 +10,11 @@ export class OrderController {
 retry(@Param('id') id: string) {
   return this.orderService.retryOrder(Number(id));
 }
+
+  @Post('retry-failed/:id')
+retryFailed(@Param('id') id: string) {
+  return this.orderService.retryFailedOrder(Number(id));
+}
   
   @Post()
   create(@Body() body: { productId: number }) {

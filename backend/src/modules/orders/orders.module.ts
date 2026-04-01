@@ -1,30 +1,35 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { BullModule } from '@nestjs/bull';
+import { RabbitMQModule } from '../../rabbitmq/rabbitmq.module';
 
 import { Order } from './order.entity';
 import { OrderService } from './order.service';
 import { OrderProcessor } from './order.processor';
 import { InventoryService } from '../inventory/inventory.service';
 import { OrderController } from './order.controller';
+import { FailedProcessor } from './failed.processor';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Order]),
+  TypeOrmModule.forFeature([Order]),
 
-    BullModule.registerQueue({ name: 'orders' }),
+  RabbitMQModule,   // 🔥 THIS LINE FIXES YOUR ERROR
 
-    // ⚠️ Only if you are still using notification queue
-    BullModule.registerQueue({ name: 'notification-queue' }),
-  ],
+  BullModule.registerQueue(
+    { name: 'orders' },
+    { name: 'failed-orders' },
+    { name: 'notification-queue' },
+  ),
+],
+
   controllers: [OrderController],
 
   providers: [
     OrderService,
     OrderProcessor,
-
-    // 🔥 THIS IS THE FIX
     InventoryService,
+    FailedProcessor,
   ],
 })
 export class OrdersModule {}

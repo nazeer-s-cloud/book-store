@@ -78,3 +78,10 @@ services:
     ports:
       - "1025:1025"
       - "8025:8025"
+  
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: devdocs_rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"

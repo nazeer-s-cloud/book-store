@@ -9,6 +9,7 @@ import { InventoryService } from '../inventory/inventory.service';
 
 @Injectable()
 export class OrderService {
+  
   constructor(
     @InjectRepository(Order)
     private orderRepo: Repository<Order>,
@@ -28,6 +29,31 @@ export class OrderService {
     });
   }
 
+  async retryFailedOrder(orderId: number) {
+  console.log('🔁 Retrying failed order:', orderId);
+
+  // reset status
+  await this.orderRepo.update(orderId, {
+    status: 'PENDING',
+  });
+
+  // push back to main queue
+  await this.orderQueue.add(
+    'process-order',
+    { orderId },
+    {
+      attempts: 3,
+      backoff: {
+        type: 'exponential',
+        delay: 3000,
+      },
+    },
+  );
+
+  return { message: 'Retry triggered' };
+}
+  
+
   async createOrder(productId: number) {
     const order = this.orderRepo.create({
       productId,
@@ -38,9 +64,19 @@ export class OrderService {
 
     console.log('📥 Adding job to queue:', saved.id);
 
-    await this.orderQueue.add('process-order', {
-      orderId: saved.id,
-    });
+    await this.orderQueue.add(
+  'process-order',
+  { orderId: saved.id },
+  {
+    attempts: 3,
+    backoff: {
+      type: 'exponential',
+      delay: 3000,
+    },
+    removeOnComplete: true,
+    removeOnFail: false,
+  },
+);
 
     return saved;
   }
