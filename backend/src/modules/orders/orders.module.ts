@@ -1,35 +1,43 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { BullModule } from '@nestjs/bull';
-import { RabbitMQModule } from '../../rabbitmq/rabbitmq.module';
+import { ClientsModule, Transport } from '@nestjs/microservices';
 
 import { Order } from './order.entity';
 import { OrderService } from './order.service';
 import { OrderProcessor } from './order.processor';
 import { InventoryService } from '../inventory/inventory.service';
-import { OrderController } from './order.controller';
-import { FailedProcessor } from './failed.processor';
+import { OrderController } from './order.controller'; // ✅ MAKE SURE PATH IS CORRECT
 
 @Module({
   imports: [
-  TypeOrmModule.forFeature([Order]),
+    TypeOrmModule.forFeature([Order]),
 
-  RabbitMQModule,   // 🔥 THIS LINE FIXES YOUR ERROR
+    BullModule.registerQueue(
+      { name: 'orders' },
+      { name: 'notification-queue' },
+      { name: 'failed-orders' },
+    ),
 
-  BullModule.registerQueue(
-    { name: 'orders' },
-    { name: 'failed-orders' },
-    { name: 'notification-queue' },
-  ),
-],
+    ClientsModule.register([
+      {
+        name: 'RABBITMQ_SERVICE',
+        transport: Transport.RMQ,
+        options: {
+          urls: ['amqp://rabbitmq:5672'],
+          queue: 'order.queue',
+          queueOptions: { durable: true },
+        },
+      },
+    ]),
+  ],
 
-  controllers: [OrderController],
+  controllers: [OrderController], // 🔥 REQUIRED
 
   providers: [
     OrderService,
     OrderProcessor,
     InventoryService,
-    FailedProcessor,
   ],
 })
 export class OrdersModule {}

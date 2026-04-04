@@ -1,24 +1,47 @@
-import { Controller, Post, Body } from '@nestjs/common';
-import { AppService } from './app.service';
+import { Controller } from '@nestjs/common';
+import { EventPattern, ClientProxy, ClientProxyFactory, Transport } from '@nestjs/microservices';
 
-import { EventPattern } from '@nestjs/microservices';
-
-@Controller('process-payment')
+@Controller()
 export class AppController {
   getHello(): any {
     throw new Error('Method not implemented.');
   }
-  constructor(private readonly appService: AppService) {}
+
+  private client: ClientProxy;
+
+  constructor() {
+  this.client = ClientProxyFactory.create({
+    transport: Transport.RMQ,
+    options: {
+      urls: ['amqp://rabbitmq:5672'],
+      queue: 'order.queue',   // ✅ USE SAME QUEUE
+      queueOptions: {
+        durable: true,
+      },
+    },
+  });
+}
 
   @EventPattern('payment.process')
   async handlePayment(data: any) {
-    console.log('💰 RabbitMQ Payment:', data);
+    console.log('💰 Processing payment:', data);
 
-    return { status: 'SUCCESS' };
-  }
+    // simulate success/failure
+    const isSuccess = Math.random() > 0.3;
 
-  @Post()
-  processPayment(@Body() body: any) {
-    return this.appService.processPayment(body);
+    if (isSuccess) {
+      console.log('✅ Payment success');
+
+      this.client.emit('payment.success', {
+        orderId: data.orderId,
+      });
+
+    } else {
+      console.log('❌ Payment failed');
+
+      this.client.emit('payment.failed', {
+        orderId: data.orderId,
+      });
+    }
   }
 }

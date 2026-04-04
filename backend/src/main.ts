@@ -3,6 +3,7 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { getQueueToken } from '@nestjs/bull';
 import { setupBullBoard } from './queue/queue.ui';
+import { Transport } from '@nestjs/microservices/enums/transport.enum';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);

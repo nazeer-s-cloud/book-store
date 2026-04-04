@@ -65,24 +65,6 @@ this.client.emit('payment.process', {
   amount: order.totalAmount || 100,
 });
 
-// 🔥 KEEP HTTP (for now — safety fallback)
-// 🔥 PAYMENT (HYBRID: HTTP + RMQ)
-
-console.log('📡 Sending to RabbitMQ...');
-
-this.client.emit('payment.process', {
-  orderId: order.id,
-  amount: order.totalAmount || 100,
-});
-
-// 🔥 KEEP HTTP (for now — safety fallback)
-
- console.log('📡 Sending to RabbitMQ...');
-
-this.client.emit('payment.process', {
-  orderId: order.id,
-  amount: order.totalAmount || 100,
-});
 
 console.log('💰 Payment success');
 
@@ -96,15 +78,7 @@ console.log('💰 Payment success');
 
       // 🔥 AFTER PAYMENT + INVENTORY
 
-await this.notificationQueue.add(
-  'send-email',
-  {
-    email: 'test@example.com',
-    message: `Order #${orderId} completed`,
-  },
-);
-
-      console.log('✅ Order completed');
+      console.log('📡 Payment event sent, waiting for result...');
     } 
     
       catch (err) {

@@ -9,14 +9,14 @@ import { ClientsModule, Transport } from '@nestjs/microservices';
         transport: Transport.RMQ,
         options: {
           urls: ['amqp://rabbitmq:5672'],
-          queue: 'payment.queue',
-          queueOptions: {
-            durable: true,
-          },
+          exchange: 'order.exchange',     // 🔥 THIS IS NEW
+          exchangeType: 'topic',          // 🔥 THIS IS NEW
         },
       },
     ]),
   ],
+
+  
   exports: [ClientsModule], // 🔥 REQUIRED
 })
 export class RabbitMQModule {}

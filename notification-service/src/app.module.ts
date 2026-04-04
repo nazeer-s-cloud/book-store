@@ -14,6 +14,6 @@ import { NotificationProcessor } from './notification.processor';
       name: 'notification-queue',
     }),
   ],
-  providers: [NotificationProcessor],
+  controllers: [NotificationProcessor],
 })
 export class AppModule {}

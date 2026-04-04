@@ -1,27 +1,40 @@
-import { Processor, Process } from '@nestjs/bull';
+import { Controller } from '@nestjs/common';
+import { EventPattern } from '@nestjs/microservices';
 import * as nodemailer from 'nodemailer';
 
-@Processor('notification-queue')
+@Controller()
 export class NotificationProcessor {
 
   private transporter = nodemailer.createTransport({
-    host: 'mailhog',   // 🔥 docker service name
-    port: 1025,
+  host: 'mailhog',
+  port: 1025,
+  secure: false,
+  ignoreTLS: true,
+});
+
+  @EventPattern('payment.success')
+async handleSuccess(data: any) {
+  console.log('📧 Sending email for order:', data.orderId);
+
+  const info = await this.transporter.sendMail({
+    from: 'no-reply@devdocs.com',
+    to: 'test@example.com',
+    subject: 'Order Completed',
+    text: `Order #${data.orderId} completed successfully`,
   });
 
-  @Process('send-email')
-  async handle(job: any) {
-    const { email, message } = job.data;
+  console.log('📨 Mail sent:', info);
+}
 
-    console.log('📧 Sending email to:', email);
+@EventPattern('payment.failed')
+async handleFailed(data: any) {
+  console.log('❌ Sending failure email:', data.orderId);
 
-    await this.transporter.sendMail({
-      from: 'noreply@devdocs.com',
-      to: email,
-      subject: 'Order Update',
-      text: message,
-    });
-
-    console.log('✅ Email sent to Mailhog');
-  }
+  await this.transporter.sendMail({
+    from: 'no-reply@devdocs.com',
+    to: 'test@example.com',
+    subject: 'Order Failed',
+    text: `Order #${data.orderId} failed`,
+  });
+}
 }
