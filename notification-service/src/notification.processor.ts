@@ -14,7 +14,11 @@ export class NotificationProcessor {
 
   @EventPattern('payment.success')
 async handleSuccess(data: any) {
-  console.log('📧 Sending email for order:', data.orderId);
+  const traceId = data.traceId || 'no-trace';
+
+  console.log(
+    `[traceId=${traceId}] 📧 Sending email for order: ${data.orderId}`,
+  );
 
   const info = await this.transporter.sendMail({
     from: 'no-reply@devdocs.com',
@@ -23,12 +27,19 @@ async handleSuccess(data: any) {
     text: `Order #${data.orderId} completed successfully`,
   });
 
-  console.log('📨 Mail sent:', info);
+  console.log(
+    `[traceId=${traceId}] 📨 Mail sent`,
+    info,
+  );
 }
 
 @EventPattern('payment.failed')
 async handleFailed(data: any) {
-  console.log('❌ Sending failure email:', data.orderId);
+  const traceId = data.traceId || 'no-trace';
+
+  console.log(
+    `[traceId=${traceId}] ❌ Sending failure email: ${data.orderId}`,
+  );
 
   await this.transporter.sendMail({
     from: 'no-reply@devdocs.com',

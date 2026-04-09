@@ -3,26 +3,19 @@ import { AppModule } from './app.module';
 import { Transport } from '@nestjs/microservices';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
-
-  // ✅ CONNECT RABBITMQ MICROSERVICE
-  app.connectMicroservice({
+  const app = await NestFactory.createMicroservice(AppModule, {
     transport: Transport.RMQ,
     options: {
       urls: ['amqp://rabbitmq:5672'],
-      queue: 'order.queue',
+      queue: 'payment.queue',
       queueOptions: {
         durable: true,
       },
     },
   });
 
-  // ✅ START MICROSERVICE
-  await app.startAllMicroservices();
+  await app.listen();
 
-  await app.listen(3000);
-
-  console.log('🚀 Payment service running');
+  console.log('🚀 Payment service listening...');
 }
-
 bootstrap();

@@ -25,7 +25,7 @@ import { OrderController } from './order.controller'; // ✅ MAKE SURE PATH IS C
         transport: Transport.RMQ,
         options: {
           urls: ['amqp://rabbitmq:5672'],
-          queue: 'order.queue',
+          queue: 'payment.queue',
           queueOptions: { durable: true },
         },
       },

@@ -37,71 +37,53 @@ export class OrderProcessor {
   
 
   @Process('process-order')
-  async handle(job: Job) {
-    const { orderId } = job.data;
+async handle(job: Job) {
+  const { orderId } = job.data;
 
-    console.log(`🚀 Processing order ${orderId}`);
+  console.log(`🚀 Processing order ${orderId}`);
 
-    const order = await this.orderRepo.findOne({
-      where: { id: orderId },
+  const order = await this.orderRepo.findOne({
+    where: { id: orderId },
+  });
+
+  if (!order) throw new Error('Order not found');
+
+  await this.orderRepo.update(orderId, {
+    status: 'PROCESSING',
+  });
+
+  try {
+    console.log('📡 Sending payment.process to RabbitMQ...');
+
+    await this.client.emit('payment.process', {
+      orderId: order.id,
+      amount: order.totalAmount || 100,
+      traceId: `trace-${Date.now()}`, // 🔥 IMPORTANT
     });
 
-    if (!order) throw new Error('Order not found');
+    console.log('📡 Payment event sent');
 
-    await this.orderRepo.update(orderId, {
-      status: 'PROCESSING',
-    });
+    // ❗ DO NOT mark completed here
+    // ❗ DO NOT assume success
 
-    
+  } catch (err) {
+    const message = err.message || '';
 
-    try {
-      // 🔥 PAYMENT (HTTP CALL)
-      // 🔥 PAYMENT (HYBRID: HTTP + RMQ)
+    if (message.includes('Out of stock')) {
+      console.log('❌ Non-retryable error');
 
-console.log('📡 Sending to RabbitMQ...');
-
-this.client.emit('payment.process', {
-  orderId: order.id,
-  amount: order.totalAmount || 100,
-});
-
-
-console.log('💰 Payment success');
-
-      // 🔥 INVENTORY
-      await this.inventoryService.reserveStock(orderId);
-
-      // 🔥 COMPLETE
-      await this.orderRepo.update(orderId, {
-        status: 'COMPLETED',
+      await this.failedQueue.add('failed-order', {
+        orderId,
+        reason: message,
+        type: 'BUSINESS_ERROR',
       });
 
-      // 🔥 AFTER PAYMENT + INVENTORY
+      return;
+    }
 
-      console.log('📡 Payment event sent, waiting for result...');
-    } 
-    
-      catch (err) {
-
-  const message = err.message || '';
-
-  // 🔥 NON-RETRYABLE
-  if (message.includes('Out of stock')) {
-    console.log('❌ Non-retryable error');
-
-    await this.failedQueue.add('failed-order', {
-      orderId,
-      reason: message,
-      type: 'BUSINESS_ERROR',
-    });
-
-    return; // ❌ NO RETRY
+    throw err;
   }
-
-  // 🔥 RETRYABLE
-  throw err; // Bull will retry
 }
-  }
 
 
 

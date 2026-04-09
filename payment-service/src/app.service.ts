@@ -1,5 +1,6 @@
 import { Injectable, Inject } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
+import { firstValueFrom } from 'rxjs';
 
 @Injectable()
 export class AppService {
@@ -9,21 +10,53 @@ export class AppService {
   ) {}
 
   async processPayment(data: any) {
-    console.log('💰 Processing payment:', data);
+    const traceId = data.traceId || `trace-${Date.now()}`;
 
-    // simulate success
+    // ✅ structured log
+    console.log(
+      JSON.stringify({
+        service: 'payment',
+        event: 'payment.process',
+        orderId: data.orderId,
+        traceId,
+      }),
+    );
+
     const isSuccess = true;
 
     if (isSuccess) {
-      console.log('✅ Emitting payment.success');
+      console.log(
+        JSON.stringify({
+          service: 'payment',
+          event: 'payment.success',
+          orderId: data.orderId,
+          traceId,
+        }),
+      );
 
-      this.client.emit('payment.success', {
-        orderId: data.orderId,
-      });
+      // ✅ FIX: emit SUCCESS (NOT process)
+      await firstValueFrom(
+        this.client.emit('payment.success', {
+          orderId: data.orderId,
+          traceId,
+        }),
+      );
     } else {
-      this.client.emit('payment.failed', {
-        orderId: data.orderId,
-      });
+      console.log(
+        JSON.stringify({
+          service: 'payment',
+          event: 'payment.failed',
+          orderId: data.orderId,
+          traceId,
+        }),
+      );
+
+      await firstValueFrom(
+        this.client.emit('payment.failed', {
+          orderId: data.orderId,
+          traceId,
+        }),
+      );
     }
   }
 }
